@@ -1,19 +1,156 @@
 <!DOCTYPE html>
-<html>
+<html class="fitted">
   <head>
     <meta charset="UTF-8">
     <title>Hello World!</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+      }
+      .fitted {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+      }
+      .fitted > * {
+        flex: 1;
+      }
+
+      .panes {
+        display: flex;
+      }
+      .panes > * {
+        flex: 1;
+      }
+      .commandbar {
+        position: fixed;
+      }
+    </style>
   </head>
-  <body>
-    <h1>Hello World!</h1>
-    <!-- All of the Node.js APIs are available in this renderer process. -->
-    We are using Node.js <script>document.write(process.versions.node)</script>,
-    Chromium <script>document.write(process.versions.chrome)</script>,
-    and Electron <script>document.write(process.versions.electron)</script>.
+  <body class="fitted">
+    <div class="panes">
+    </div>
+    <div class="commandbar">commandbar</div>
 
     <script>
       // You can also require other files to run in this process
-      require('./renderer.js')
+      require('./renderer.js');
+
+      var store = {}
+
+      var id = 0;
+      var createWV = function () {
+        id += 1;
+        store[id] = document.createElement('webview');
+        store[id].setAttribute('src', 'https://github.com/');
+        return id;
+      };
+
+      var currentId = [];
+      var setWv = function (next) {
+        if (currentId.length === next.length && currentId[0] === next[0]) return;
+        if (currentId.length && store[currentId[0]]) store[currentId[0]].blur();
+        currentId = [next];
+        if (currentId.length) store[currentId[0]].focus();
+      };
+      var killView = function (id) {
+        store[id].remove();
+        delete store[id];
+      };
+
+      var panes = []
+      var paneContainer = document.querySelector('.panes')
+      var currentPane = [];
+      var setPane = function (_idx) {
+        var idx = _idx < 0 ? 0 :
+                  _idx >= panes.length ? panes.length - 1 :
+                  _idx
+        if (panes[idx]) {
+          currentPane = [idx];
+          setWv(panes[idx]);
+        }
+      };
+      var newPane = function () {
+        var id = createWV();
+        panes.push(id);
+        paneContainer.appendChild(store[id]);
+        setPane(panes.length - 1);
+      };
+      var leftPane = function () {
+        currentPane.forEach(function (idx) {
+          setPane(idx - 1);
+        });
+      };
+      var rightPane = function () {
+        currentPane.forEach(function (idx) {
+          setPane(idx + 1);
+        });
+      };
+      var killPane = function (idx) {
+        var id = panes[idx];
+        killView(id);
+        panes.splice(idx, 1);
+        currentPane.forEach(function (cidx) {
+          if (cidx === idx) {
+            setPane(idx);
+          }
+          else if (cidx > idx) {
+            currentPane = [cidx - 1];
+          }
+        });
+      };
+
+      window.addEventListener('keypress', function (e) {
+        if (e.key === 'n') {
+           e.preventDefault();
+           newPane();
+           return false;
+        }
+        else if (e.key === 'h') {
+          e.preventDefault();
+          leftPane();
+          return false;
+        }
+        else if (e.key === 'l') {
+          e.preventDefault();
+          rightPane();
+          return false;
+        }
+        else if (e.key === 'x') {
+          e.preventDefault();
+          currentPane.forEach(killPane);
+          return false;
+        }
+        else if (e.key === 'j') {
+          e.preventDefault();
+          currentId.forEach(function (id) {
+            store[id].sendInputEvent({
+              type: 'keyDown',
+              modifiers: [],
+              keyCode: 'PageDown'
+            });
+          });
+          return false;
+        }
+        else if (e.key === 'k') {
+          e.preventDefault();
+          currentId.forEach(function (id) {
+            store[id].sendInputEvent({
+              type: 'keyDown',
+              modifiers: [],
+              keyCode: 'PageUp'
+            });
+          });
+          return false;
+        }
+      });
+
+//       wvs.forEach(function (wv, index) {
+//         wv.addEventListener('focus', function () {
+//           setWv(index);
+//         });
+//       });
     </script>
   </body>
 </html>
